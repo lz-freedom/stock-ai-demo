@@ -1,0 +1,32 @@
+{
+    "nav": {
+        "title": "Stock AI Demo",
+        "language": "Language"
+    },
+    "common": {
+        "welcome": "Welcome to Stock AI Demo",
+        "description": "This is a demo application for stock analysis."
+    },
+    "knowledge": {
+        "sectionTitle": "Stock Knowledge",
+        "bull": {
+            "title": "Bull Market",
+            "desc": "A market condition in which prices are rising or are expected to rise."
+        },
+        "bear": {
+            "title": "Bear Market",
+            "desc": "A market condition in which prices are falling or are expected to fall."
+        },
+        "kline": {
+            "title": "Candlestick Chart",
+            "desc": "A style of financial chart used to describe price movements of a security, derivative, or currency."
+        },
+        "volume": {
+            "title": "Trading Volume",
+            "desc": "The amount of a security that was traded during a given period of time."
+        }
+    },
+    "tips": {
+        "title": "Stock Tips"
+    }
+}

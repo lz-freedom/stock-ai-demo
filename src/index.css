@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@keyframes marquee {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.animate-marquee {
+    animation: marquee 180s linear infinite;
+}
+
+.animate-marquee:hover {
+    animation-play-state: paused;
+}
+
+@layer utilities {
+    .glass-panel {
+        @apply bg-white rounded-2xl border border-slate-200 shadow-sm;
+    }
+
+    .sidebar-bg {
+        background-color: #F8FAFC;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .marquee-content {
+        display: flex;
+        width: max-content;
+    }
+
+    .progress-stripes {
+        background-image: linear-gradient(45deg,
+                rgba(255, 255, 255, 0.2) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255, 255, 255, 0.2) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                transparent 75%,
+                transparent);
+        background-size: 40px 40px;
+        animation: progress-move 2s linear infinite;
+    }
+
+    @keyframes progress-move {
+        0% {
+            background-position: 0 0;
+        }
+
+        100% {
+            background-position: 40px 0;
+        }
+    }
+
+    .percentage-glow {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    .processing-ring {
+        @apply absolute -inset-1 rounded-xl border-2 border-dashed border-current opacity-30;
+        animation: spin-slow 10s linear infinite;
+    }
+
+    .model-icon {
+        animation: model-breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes spin-slow {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes model-breathe {
+
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 0.8;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes ping-slow {
+
+        75%,
+        100% {
+            transform: scale(2);
+            opacity: 0;
+        }
+    }
+}
