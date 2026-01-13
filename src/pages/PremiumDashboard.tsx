@@ -302,7 +302,7 @@ const PremiumDashboard: React.FC = () => {
 
         <div className="font-display text-slate-800 flex flex-col md:flex-row border-t border-slate-200">
             <main className="flex-1 relative">
-                <div className="max-w-[1200px] mx-auto p-6 flex flex-col gap-8">
+                <div className="max-w-[1100px] mx-auto p-6 flex flex-col gap-8">
                     {/* Marquee Section */}
                     {stockData && (
                         <div className="w-full border border-slate-200 rounded-xl h-9 flex items-center overflow-hidden relative shadow-sm shrink-0">
@@ -591,8 +591,8 @@ const PremiumDashboard: React.FC = () => {
             </main>
 
             {/* Sidebar */}
-            <aside className="w-[420px] shrink-0 bg-slate-50 border-l border-slate-200 flex flex-col">
-                <div className="flex flex-col p-6 gap-6">
+            <aside className="w-[520px] shrink-0 bg-slate-50 border-l border-slate-200 flex flex-col">
+                <div className="flex flex-col gap-6">
                     {/* Progress Bar */}
                     <div className="w-full bg-slate-100 rounded-2xl h-14 relative flex items-center overflow-hidden shadow-sm shrink-0 border border-slate-200">
                         <div className="h-full bg-blue-600 progress-stripes transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
@@ -611,7 +611,7 @@ const PremiumDashboard: React.FC = () => {
 
 
                     {/* Unified Analysis Section */}
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col shrink-0 overflow-hidden min-h-[500px]">
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col shrink-0 overflow-hidden h-[500px]">
                         {/* Analysis Header */}
                         <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
@@ -702,7 +702,7 @@ const PremiumDashboard: React.FC = () => {
 
 
                         {/* Terminal Content */}
-                        <div className="flex-1 h-64 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-500 bg-white scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 terminal-scroll-area">
+                        <div className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-500 bg-white scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 terminal-scroll-area">
 
                             <div className="flex flex-col gap-2">
                                 <div className="flex gap-2">

@@ -1,8 +1,10 @@
 # 当前任务状态
 
-## 已完成任务
-- [x] 将 PremiumDashboard 右下角的 tips 卡片替换为 StockTipsGroup 组件
-- [x] 优化 StockTipsGroup 组件 (标题修改为 "Tips"，调整样式以适应侧边栏)
+## 正在进行的任务
+- [x] 修复 PremiumDashboard 页面中 AI 思考卡片的高度问题
 
-## 下一步
-- 等待用户进一步指令
+## 任务上下文
+用户反馈 PolyBull 的超级 AI 思考卡片高度需要固定。
+
+## 下一步计划
+分析相关代码，调整样式以固定高度。

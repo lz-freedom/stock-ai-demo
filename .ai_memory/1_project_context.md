@@ -1,15 +1,13 @@
-# 项目核心知识库
+# 项目记忆
 
 ## 项目目标
-构建一个基于 React + Vite + TS + TwCSS 的现代 Web 应用。
+PolyBull 股票分析平台前端开发，旨在提供美观、动态且功能强大的股票数据分析界面。
 
-## 核心架构
-- **构建工具**: Vite
-- **框架**: React + TypeScript
-- **样式**: TailwindCSS
-- **环境管理**: 多环境配置文件 (dev/alpha/release) 存放在 `env/` 目录
+## 技术架构
+- 语言：TypeScript, JavaScript
+- 框架：React, TailwindCS (需确认版本)
 
-## 目录规范
-- `route/`: 路由
-- `api/`: 接口
-- `utils/config/`: 配置
+## 核心规范
+- 界面需具备高端审美，使用现代设计元素（玻璃拟态、动态动画）。
+- 优先使用 Vanilla CSS 或 TailwindCSS。
+- 代码需模块化，组件化。
