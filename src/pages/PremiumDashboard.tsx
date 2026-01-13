@@ -1,15 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { appStockBaseQuotaUsingGet, appStockRelatedInfoUsingGet } from '@/api/app/gupiao';
-import { AppStockBaseQuotaUsingGetResponse, AppStockRelatedInfoUsingGetResponse } from '@/api/app/types';
+import { appStockBaseQuotaUsingGet, appStockRelatedInfoUsingGet, appStockHistoryDataUsingGet, appStockFinancialsDataUsingGet } from '@/api/app/gupiao';
+import { AppStockBaseQuotaUsingGetResponse, AppStockRelatedInfoUsingGetResponse, CommonStockBaseDataResStockHistoryItem, CommonStockBaseDataResStockFinancialsItem } from '@/api/app/types';
+import { generateFinancialLogs, generatePeerComparisonLogs, generateStockInfoLogs } from '@/utils/financialAnalysis';
+import ReactECharts from 'echarts-for-react';
+import * as echarts from 'echarts';
 
+import StockTipsGroup from '@/components/knowledge/StockTipsGroup';
+
+import IconOpenAI from '@/assets/ai-model/openai.svg';
+import IconClaude from '@/assets/ai-model/claude-color.svg';
+import IconGrok from '@/assets/ai-model/grok.svg';
+import IconDeepSeek from '@/assets/ai-model/deepseek-color.svg';
+import IconGoogle from '@/assets/ai-model/google.svg';
+import IconMinimax from '@/assets/ai-model/minimax-color.svg';
+import IconDoubao from '@/assets/ai-model/doubao-color.svg';
+import IconQwen from '@/assets/ai-model/qwen-color.svg';
 const PremiumDashboard: React.FC = () => {
-    const [selectedPeriod, setSelectedPeriod] = React.useState('5Y');
+    const [selectedPeriod, setSelectedPeriod] = React.useState('1Y');
     const [searchParams] = useSearchParams();
     const stockSymbol = searchParams.get('stock_symbol') || 'AAPL';
     const exchangeAcronym = searchParams.get('exchange_acronym') || 'NASDAQ';
     const [stockData, setStockData] = useState<AppStockBaseQuotaUsingGetResponse['data'] | null>(null);
     const [relatedData, setRelatedData] = useState<AppStockRelatedInfoUsingGetResponse['data'] | null>(null);
+    const [financialData, setFinancialData] = useState<{
+        income?: CommonStockBaseDataResStockFinancialsItem;
+        balance?: CommonStockBaseDataResStockFinancialsItem;
+        cashflow?: CommonStockBaseDataResStockFinancialsItem;
+    }>({});
+    const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
+    const [stockInfoLogs, setStockInfoLogs] = useState<string[]>([]);
+    const [peerLogs, setPeerLogs] = useState<string[]>([]);
+    const [financialLogs, setFinancialLogs] = useState<string[]>([]);
+    const [fullLogs, setFullLogs] = useState<string[]>([]);
+
+    // Combine logs
+    useEffect(() => {
+        setFullLogs([...stockInfoLogs, ...financialLogs, ...peerLogs]);
+    }, [stockInfoLogs, financialLogs, peerLogs]);
+
+    // Reset logs on symbol change
+    useEffect(() => {
+        setStockInfoLogs([]);
+        setPeerLogs([]);
+        setFinancialLogs([]);
+        setTerminalLogs([]);
+    }, [stockSymbol]);
+    const [historyData, setHistoryData] = useState<CommonStockBaseDataResStockHistoryItem[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [progress, setProgress] = useState(0);
     const scrollRef = React.useRef<HTMLDivElement>(null);
 
     const scroll = (direction: 'left' | 'right') => {
@@ -31,6 +70,28 @@ const PremiumDashboard: React.FC = () => {
     }, [relatedData]);
 
     useEffect(() => {
+        const duration = 8 * 60 * 1000; // 8 minutes
+        const startTime = Date.now();
+
+        const timer = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const ratio = Math.min(elapsed / duration, 1);
+
+            // Cubic ease-out function: 1 - (1 - t)^3
+            // This starts fast and slows down towards the end
+            const easedProgress = (1 - Math.pow(1 - ratio, 3)) * 100;
+
+            setProgress(easedProgress);
+
+            if (ratio >= 1) {
+                clearInterval(timer);
+            }
+        }, 100);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
         const fetchData = async () => {
             try {
                 // Fetch base quota
@@ -42,6 +103,7 @@ const PremiumDashboard: React.FC = () => {
                 });
                 if (res) {
                     setStockData(res as any);
+                    if (res.data) setStockInfoLogs(generateStockInfoLogs(res.data));
                 }
 
                 // Fetch related info (peers)
@@ -53,7 +115,37 @@ const PremiumDashboard: React.FC = () => {
                 });
                 if (relatedRes) {
                     setRelatedData(relatedRes as any);
+                    // We need stockData here. Since we just fetched it above (res), we can use res.data
+                    if (res && res.data && relatedRes.data) {
+                        setPeerLogs(generatePeerComparisonLogs(res.data, relatedRes.data));
+                    }
                 }
+
+                // Fetch Financials
+                try {
+                    const [incomeRes, balanceRes, cashflowRes] = await Promise.all([
+                        appStockFinancialsDataUsingGet({ params: { symbol: stockSymbol, exchange_acronym: exchangeAcronym, financials_type: 'income', freq_type: 'quarterly' } }),
+                        appStockFinancialsDataUsingGet({ params: { symbol: stockSymbol, exchange_acronym: exchangeAcronym, financials_type: 'balance', freq_type: 'quarterly' } }),
+                        appStockFinancialsDataUsingGet({ params: { symbol: stockSymbol, exchange_acronym: exchangeAcronym, financials_type: 'cashflow', freq_type: 'quarterly' } })
+                    ]);
+
+                    const incomeItem = (incomeRes as any)?.list?.[0] || incomeRes.data?.list?.[0];
+                    const balanceItem = (balanceRes as any)?.list?.[0] || balanceRes.data?.list?.[0];
+                    const cashflowItem = (cashflowRes as any)?.list?.[0] || cashflowRes.data?.list?.[0];
+
+                    setFinancialData({
+                        income: incomeItem,
+                        balance: balanceItem,
+                        cashflow: cashflowItem
+                    });
+
+                    const logs = generateFinancialLogs(incomeItem, balanceItem, cashflowItem);
+                    setFinancialLogs(logs);
+                } catch (e) {
+                    console.error('Failed to fetch financials', e);
+                    setTerminalLogs(["Error: Financial data stream interrupted."]);
+                }
+
             } catch (error) {
                 console.error('Failed to fetch stock data', error);
             }
@@ -61,14 +153,159 @@ const PremiumDashboard: React.FC = () => {
         fetchData();
     }, [stockSymbol, exchangeAcronym]);
 
+    // Log Simulation Effect
+    // Log Simulation Effect (Incremental)
+    useEffect(() => {
+        if (terminalLogs.length < fullLogs.length) {
+            const timeout = setTimeout(() => {
+                setTerminalLogs(prev => [...prev, fullLogs[prev.length]]);
+
+                // Auto-scroll
+                const terminal = document.querySelector('.terminal-scroll-area');
+                if (terminal) {
+                    terminal.scrollTop = terminal.scrollHeight;
+                }
+            }, 800);
+            return () => clearTimeout(timeout);
+        }
+    }, [terminalLogs, fullLogs]);
+
+    const PERIOD_MAPPING: Record<string, { period: string; interval: string }> = {
+        '1D': { period: '1d', interval: '5m' },
+        '5D': { period: '5d', interval: '15m' },
+        '1M': { period: '1mo', interval: '1d' },
+        '6M': { period: '6mo', interval: '1d' },
+        'YTD': { period: 'ytd', interval: '1d' },
+        '1Y': { period: '1y', interval: '1d' },
+        '5Y': { period: '5y', interval: '1wk' },
+        'All': { period: 'max', interval: '1mo' },
+    };
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            setIsLoadingHistory(true);
+            try {
+                const { period, interval } = PERIOD_MAPPING[selectedPeriod] || PERIOD_MAPPING['5Y'];
+                const res = await appStockHistoryDataUsingGet({
+                    params: {
+                        symbol: stockSymbol,
+                        exchange_acronym: exchangeAcronym,
+                        period,
+                        interval,
+                    }
+                });
+                // The response structure seems to be unwrapped to the data object directly by the request interceptor
+                // based on how stockData and relatedData are handled.
+                // So 'res' is effectively AppStockHistoryDataUsingGetResponse.data
+                const data = res as any;
+                if (data?.list) {
+                    setHistoryData(data.list);
+                } else if (res?.data?.list) {
+                    // Fallback in case I am wrong and it IS wrapped
+                    setHistoryData(res.data.list);
+                }
+            } catch (error) {
+                console.error('Failed to fetch history data', error);
+            } finally {
+                setIsLoadingHistory(false);
+            }
+        };
+        fetchHistory();
+    }, [selectedPeriod, stockSymbol, exchangeAcronym]);
+
+    const getChartOption = () => {
+        if (!historyData || historyData.length === 0) return {};
+
+        const dates = historyData.map(item => item.date || item.date_raw);
+        const prices = historyData.map(item => item.close);
+
+        return {
+            tooltip: {
+                trigger: 'axis',
+                formatter: function (params: any) {
+                    const param = params[0];
+                    if (!param) return '';
+                    const date = historyData[param.dataIndex].date || historyData[param.dataIndex].date_raw;
+                    const price = param.value;
+                    return `<div><div style="font-size:10px;color:#666;">${date}</div><div style="font-weight:bold;color:#3b82f6;">${Number(price).toFixed(2)}</div></div>`;
+                },
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderColor: '#e2e8f0',
+                borderWidth: 1,
+                padding: [8, 12],
+                textStyle: {
+                    color: '#1e293b'
+                }
+            },
+            grid: {
+                top: 20,
+                right: 20,
+                bottom: 20,
+                left: 0,
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: dates,
+                boundaryGap: false,
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: {
+                    formatter: (value: string) => {
+                        // Simple logic to show shorter date based on period could be added here
+                        const date = new Date(value);
+                        if (selectedPeriod === '1D' || selectedPeriod === '5D') {
+                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                        return date.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: '2-digit' });
+                    },
+                    color: '#94a3b8',
+                    fontSize: 10,
+                    showMinLabel: true,
+                    showMaxLabel: true,
+                }
+            },
+            yAxis: {
+                type: 'value',
+                scale: true,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#f1f5f9',
+                        type: 'dashed'
+                    }
+                },
+                axisLabel: {
+                    show: false // Hide Y axis labels to match design or keep simple
+                }
+            },
+            series: [{
+                data: prices,
+                type: 'line',
+                smooth: true,
+                symbol: 'none',
+                lineStyle: {
+                    color: '#3b82f6',
+                    width: 2
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(59, 130, 246, 0.2)' },
+                        { offset: 1, color: 'rgba(59, 130, 246, 0)' }
+                    ])
+                }
+            }]
+        };
+    };
+
     return (
 
         <div className="font-display text-slate-800 flex flex-col md:flex-row border-t border-slate-200">
             <main className="flex-1 relative">
-                <div className="max-w-[1200px] mx-auto p-8 flex flex-col gap-8">
+                <div className="max-w-[1200px] mx-auto p-6 flex flex-col gap-8">
                     {/* Marquee Section */}
                     {stockData && (
-                        <div className="w-full border border-slate-200 rounded-xl h-12 flex items-center overflow-hidden relative shadow-sm shrink-0 bg-white">
+                        <div className="w-full border border-slate-200 rounded-xl h-9 flex items-center overflow-hidden relative shadow-sm shrink-0">
                             <div className="flex items-center gap-8 animate-marquee whitespace-nowrap px-4">
                                 {[0, 1].map((iteration) => (
                                     <React.Fragment key={iteration}>
@@ -126,17 +363,11 @@ const PremiumDashboard: React.FC = () => {
                                             { label: '200D Chg', value: stockData.two_hundred_day_average_change, color: true },
                                             { label: '200D %', value: stockData.two_hundred_day_average_change_percent, isPercent: true, color: true },
                                             { label: 'YTD', value: stockData.year_to_date_return, isPercent: true, color: true },
-                                            { label: 'YTD Range', value: stockData.year_to_date_trading_date_range },
                                             { label: '3M', value: stockData.three_month_return, isPercent: true, color: true },
-                                            { label: '3M Range', value: stockData.three_month_trading_date_range },
                                             { label: '6M', value: stockData.six_month_return, isPercent: true, color: true },
-                                            { label: '6M Range', value: stockData.six_month_trading_date_range },
                                             { label: '1Y', value: stockData.one_year_return, isPercent: true, color: true },
-                                            { label: '1Y Range', value: stockData.one_year_trading_date_range },
                                             { label: '3Y', value: stockData.three_year_return, isPercent: true, color: true },
-                                            { label: '3Y Range', value: stockData.three_year_trading_date_range },
                                             { label: '5Y', value: stockData.five_year_return, isPercent: true, color: true },
-                                            { label: '5Y Range', value: stockData.five_year_trading_date_range },
                                             { label: '52W %', value: stockData.fifty_two_week_change_percent, isPercent: true, color: true },
                                             { label: 'S&P 52W %', value: stockData.sand_p_52_week_change, isPercent: true, color: true },
                                             { label: 'Rev/Share', value: stockData.revenue_per_share },
@@ -192,9 +423,9 @@ const PremiumDashboard: React.FC = () => {
                         <div className="flex flex-col md:flex-row justify-between items-center gap-6 p-2">
                             {/* Left: Logo & Info */}
                             <div className="flex items-center gap-6">
-                                <div className="size-20 bg-white rounded-2xl shadow-sm border border-slate-100 p-2 flex items-center justify-center">
+                                <div className="size-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden">
                                     {stockData.svg_logo_url ? (
-                                        <img src={stockData.svg_logo_url} alt="Logo" className="w-full h-full object-contain" />
+                                        <img src={stockData.svg_logo_url} alt="Logo" className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-2xl font-bold text-slate-400">{stockData.symbol?.[0]}</span>
                                     )}
@@ -245,9 +476,9 @@ const PremiumDashboard: React.FC = () => {
                     )}
 
                     {/* Fundamentals Grid */}
-                    <div className="p-6 border border-slate-200 rounded-2xl bg-slate-50/50">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Core Fundamentals</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-8 gap-x-4">
+                    <div className="p-5 border border-slate-200 rounded-2xl ">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Core Fundamentals</h4>
+                        <div className="flex items-center justify-between divide-x divide-slate-200 overflow-x-auto scrollbar-hide py-1">
                             {[
                                 { label: 'Market Cap', value: stockData?.market_cap ? (stockData.market_cap / 1e9).toFixed(2) + 'B' : '-' },
                                 { label: 'P/E (TTM)', value: stockData?.pe_ttm?.toFixed(2) },
@@ -256,10 +487,10 @@ const PremiumDashboard: React.FC = () => {
                                 { label: 'Volume', value: stockData?.volume ? (stockData.volume / 1e6).toFixed(2) + 'M' : '-' },
                                 { label: '52wk Range', value: stockData?.fifty_two_week_range || (stockData?.fifty_two_week_low && stockData?.fifty_two_week_high ? `${stockData.fifty_two_week_low} - ${stockData.fifty_two_week_high}` : '-') },
                                 { label: 'Beta', value: stockData?.beta?.toFixed(2) },
-                            ].map((item, i) => (
-                                <div key={item.label} className={`flex flex-col ${i < 4 ? 'border-r border-slate-200/60 pr-4 last:border-r-0 md:last:border-r-0' : ''}`}> {/* Simplified styling logic, actual borders tricky in grid. Let's just remove borders for cleaner look or use simple separate divs */}
-                                    <span className="text-xs text-slate-500 mb-1">{item.label}</span>
-                                    <span className="text-xl font-bold text-slate-800">{item.value || '-'}</span>
+                            ].map((item) => (
+                                <div key={item.label} className="flex flex-col gap-1 px-6 first:pl-0 last:pr-0 text-left flex-1 shrink-0">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">{item.label}</span>
+                                    <span className="text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap">{item.value || '-'}</span>
                                 </div>
                             ))}
                         </div>
@@ -285,7 +516,7 @@ const PremiumDashboard: React.FC = () => {
                     </div>
 
                     {/* Main Chart */}
-                    <div className="border border-slate-200 rounded-2xl overflow-hidden flex flex-col min-h-[380px]">
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
                             <h3 className="text-slate-800 font-bold text-lg">Price Action</h3>
                             <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/60 overflow-x-auto">
@@ -303,32 +534,25 @@ const PremiumDashboard: React.FC = () => {
                                 ))}
                             </div>
                         </div>
-                        <div className="relative flex-1 p-8 flex flex-col justify-end">
-                            <div className="w-full h-[220px]">
-                                <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
-                                    <defs>
-                                        <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2"></stop>
-                                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"></stop>
-                                        </linearGradient>
-                                    </defs>
-                                    <path d="M0,150 C50,150 60,100 100,100 C140,100 150,130 190,130 C230,130 240,60 280,60 C320,60 330,90 370,90 C410,90 420,30 460,30 L500,20 V200 H0 Z" fill="url(#chartGradient)"></path>
-                                    <path d="M0,150 C50,150 60,100 100,100 C140,100 150,130 190,130 C230,130 240,60 280,60 C320,60 330,90 370,90 C410,90 420,30 460,30 L500,20" fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3"></path>
-                                </svg>
+                        <div className="relative flex-1 px-8 py-4 flex flex-col justify-end">
+                            <div className="w-full h-[255px]">
+                                {isLoadingHistory ? (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">Loading...</div>
+                                ) : (
+                                    <ReactECharts
+                                        option={getChartOption()}
+                                        style={{ height: '100%', width: '100%' }}
+                                        notMerge={true}
+                                    />
+                                )}
                             </div>
-                            <div className="flex justify-between mt-6 border-t border-slate-100 pt-4">
-                                <span className="text-slate-400 text-xs font-medium">2019</span>
-                                <span className="text-slate-400 text-xs font-medium">2020</span>
-                                <span className="text-slate-400 text-xs font-medium">2021</span>
-                                <span className="text-slate-400 text-xs font-medium">2022</span>
-                                <span className="text-slate-400 text-xs font-medium">2023</span>
-                            </div>
+
                         </div>
                     </div>
 
                     {/* Peer Comparison Section */}
                     {uniquePeers.length > 0 && (
-                        <div className="flex flex-col gap-4 mb-8">
+                        <div className="flex flex-col gap-4 mb-2">
                             <div className="flex items-center justify-between px-1">
                                 <h3 className="text-slate-800 font-bold text-lg">Peer Comparison</h3>
                                 <div className="flex gap-2">
@@ -356,15 +580,27 @@ const PremiumDashboard: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Disclaimer */}
+                    <div className="flex justify-center">
+                        <p className="text-[10px] leading-relaxed text-slate-400 text-center">
+                            PolyBull的超级AI的回答未必正确无误，请注意核查，不构成投资或交易建议；任何决策与风险由用户自行承担。
+                        </p>
+                    </div>
                 </div>
             </main>
 
             {/* Sidebar */}
             <aside className="w-[420px] shrink-0 bg-slate-50 border-l border-slate-200 flex flex-col">
-                <div className="flex flex-col p-8 gap-6">
+                <div className="flex flex-col p-6 gap-6">
                     {/* Progress Bar */}
                     <div className="w-full bg-slate-100 rounded-2xl h-14 relative flex items-center overflow-hidden shadow-sm shrink-0 border border-slate-200">
-                        <div className="h-full bg-primary progress-stripes transition-all duration-1000" style={{ width: '82%' }}></div>
+                        <div className="h-full bg-blue-600 progress-stripes transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="text-slate-900 font-bold text-lg drop-shadow-sm">
+                                {Math.round(progress)}%
+                            </span>
+                        </div>
                         <div className="absolute inset-0 flex items-center px-6 pointer-events-none">
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] drop-shadow-sm">Report Engine</span>
@@ -373,19 +609,25 @@ const PremiumDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Models Section */}
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 shrink-0">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">8 Models Analyzing</h4>
+
+                    {/* Unified Analysis Section */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col shrink-0 overflow-hidden min-h-[500px]">
+                        {/* Analysis Header */}
+                        <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <span className="material-symbols-outlined text-[18px] text-slate-400">terminal</span>
+                                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">PolyBull的超级AI正在思考</span>
+                            </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="relative flex h-2 w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                 </span>
-                                <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Active</span>
                             </div>
                         </div>
-                        <div className="relative">
+
+                        {/* Models Section */}
+                        <div className="relative p-5 border-b border-slate-100">
                             {/* Connection Overlay */}
                             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0, overflow: 'visible' }}>
                                 <defs>
@@ -435,159 +677,60 @@ const PremiumDashboard: React.FC = () => {
                                 </circle>
                             </svg>
 
-                            <div className="grid grid-cols-4 gap-3 relative z-10">
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-blue-200 transition-colors">
-                                        <span className="processing-ring text-blue-500"></span>
-                                        <img alt="Whale Model" className="w-5 h-5 opacity-80 model-icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDR2L8c9LVLrPa1sjoFRFmgOtldeGIWa6Lhpc8lp7axk-HSCmZD7PJL-5u9uMx01ovU7TSJG-Kks_luB1KwVIayWaATKZsqKkKWHfez4utno4qB1sebuiv3NPlcRAJlFvqKTqCXt5fs9A2ccP82MbfDn1Xhv9LZF82QivOaRjzGGPQDCsTs4ocpfvQ4_SrzTcGAwzSSFtUAjQ2A57B9rwjfBdrmkwxefL5CAWRVxtbsza-om-oaRA_oVjXwZ8LctrRazNPbncaIkSwC" />
+                            <div className="grid grid-cols-4 gap-y-6 gap-x-3 relative z-10">
+                                {[
+                                    { icon: IconOpenAI, color: 'text-emerald-500', name: 'OpenAI' },
+                                    { icon: IconClaude, color: 'text-orange-500', name: 'Claude' },
+                                    { icon: IconGrok, color: 'text-slate-800', name: 'Grok' },
+                                    { icon: IconDeepSeek, color: 'text-blue-500', name: 'DeepSeek' },
+                                    { icon: IconGoogle, color: 'text-red-500', name: 'Google' },
+                                    { icon: IconMinimax, color: 'text-indigo-500', name: 'Minimax' },
+                                    { icon: IconDoubao, color: 'text-cyan-500', name: 'Doubao' },
+                                    { icon: IconQwen, color: 'text-blue-600', name: 'Qwen' },
+                                ].map((model, i) => (
+                                    <div key={i} className="flex flex-col items-center gap-1.5 group">
+                                        <div className={`relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-${model.color.split('-')[1]}-200 transition-colors`}>
+                                            <span className={`processing-ring ${model.color}`} style={{ animationDelay: `${i * 0.1}s` }}></span>
+                                            <img alt={`${model.name} Model`} className="w-5 h-5 opacity-90 model-icon object-contain" src={model.icon} />
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-purple-200 transition-colors">
-                                        <span className="processing-ring text-purple-500" style={{ animationDelay: '0.2s' }}></span>
-                                        <img alt="Star Model" className="w-5 h-5 opacity-80 model-icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCK7e_nj8NVVhZ_7BNh_uUuA6s8CI2_DxXtKHoyMLat1zD96wJqjguQSkjTqj3M14Lvu2UzaT8KGA8ADLUEiszczMNyrTNitJhzHRPkfoglKmyLeI8VGW_pU-f3D1tEholAJBtsgzGQ1dGH-G3X8o7w0tumIaAtu3fJK1OPP0AQKZfz8ELauFLUaRg4DmV4bxTR4Ue-qZXYQIJHi0CoeI6hHuBs4EdO5PDklZ6B6BaFL-YxF7e0KRpSGNOBTVu0vlDp8kgV8XMT6uFG" />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-indigo-200 transition-colors">
-                                        <span className="processing-ring text-indigo-500" style={{ animationDelay: '0.5s' }}></span>
-                                        <img alt="Triangle Model" className="w-5 h-5 opacity-80 model-icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACrvoG9UvfvHQtcrjtrIGkoiZzUnSkYhVKvpYKlV9NZmVlta_3cEyEw_xOjTImX7KE0zr25d2A5bBn90mvUsdNaOzGrScMccncQ_Wbk_bvxblQlzFul0LEnbFYHlkruH7X8H0WSzPqJb8s3U-H0JXg3qvLdH4mpXbDULRT_dv1fMWxQC4gFiEa-tIR-wIRE0MIrOI2rMulUz2zJPldA6cdDdsWFYiELZkOP2YDZ_jTU4F3Ddg8P8Z9rOLpIIWZv46zsiT1hnyushun" />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-emerald-200 transition-colors">
-                                        <span className="processing-ring text-emerald-500" style={{ animationDelay: '0.1s' }}></span>
-                                        <img alt="Geometric Model" className="w-5 h-5 opacity-80 model-icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDj1KPXnJ-9VdUnZuHXLIz6x6xhlg0jHjHjkeR3uGabzozmgqlRwj1oLUTxbN7mquDF4y1CzrDsW0dvCMJhDFCdgFIIA1PsXAnmO4fVFD0zeeQkFjLK41jYhoA7-HKw00G4-GUhpqEdrTATMNz_5bQ25JzwO63FhPwiPUB1xCIYbycDe4qHLB6i9Ugp63pWVsEfU3m8X20eiZ7LtXfJSopAv63-kgh2EBiFd72goSdBTq9WQCa4oXd4IE2gjuBerIRsCUTlxrKisdgI" />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-orange-200 transition-colors">
-                                        <span className="processing-ring text-orange-500" style={{ animationDelay: '0.3s' }}></span>
-                                        <span className="material-symbols-outlined text-orange-400 text-[20px] model-icon scale-90">psychology</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-cyan-200 transition-colors">
-                                        <span className="processing-ring text-cyan-500" style={{ animationDelay: '0.6s' }}></span>
-                                        <span className="material-symbols-outlined text-cyan-400 text-[20px] model-icon scale-90">show_chart</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-rose-200 transition-colors">
-                                        <span className="processing-ring text-rose-500" style={{ animationDelay: '0.4s' }}></span>
-                                        <span className="material-symbols-outlined text-rose-400 text-[20px] model-icon scale-90">smart_toy</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1.5 group">
-                                    <div className="relative w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center group-hover:border-teal-200 transition-colors">
-                                        <span className="processing-ring text-teal-500" style={{ animationDelay: '0.7s' }}></span>
-                                        <span className="material-symbols-outlined text-teal-400 text-[20px] model-icon scale-90">database</span>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
 
 
-                    {/* Terminal */}
-                    <div className="flex-1 min-h-0 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
-                        <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 shrink-0">
-                            <div className="flex items-center gap-2.5">
-                                <span className="material-symbols-outlined text-[20px] text-slate-400">terminal</span>
-                                <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">Live Analysis Terminal</span>
-                            </div>
-                            <span className="relative flex size-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full size-2.5 bg-emerald-500"></span>
-                            </span>
-                        </div>
-                        <div className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-500 bg-white scroll-smooth">
+
+
+                        {/* Terminal Content */}
+                        <div className="flex-1 h-64 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-500 bg-white scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 terminal-scroll-area">
+
                             <div className="flex flex-col gap-2">
                                 <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:01]</span>
+                                    <span className="text-slate-400 select-none">[{new Date().toLocaleTimeString([], { hour12: false })}]</span>
                                     <span>Connected to <span className="text-primary font-bold">SecureStream v4.2.1</span></span>
                                 </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:02]</span>
-                                    <span>Validating user session tokens...</span>
-                                </div>
-                                <div className="pl-16">
-                                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 text-[9px] font-bold uppercase">Authorized</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:04]</span>
-                                    <span>Processing Q3 Earnings Transcript...</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:15]</span>
-                                    <span>Calculating 5Y CAGR metrics for ticker AAPL</span>
-                                </div>
-                                <div className="pl-16">
-                                    <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold uppercase">Running Analysis</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:21]</span>
-                                    <span>Cross-referencing peer volatility (MSFT, GOOG)</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:24]</span>
-                                    <span>Generating volatility index... 0.85 (Stable)</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:28]</span>
-                                    <span>Fetching real-time options flow data</span>
-                                </div>
-                                <div className="pl-16">
-                                    <span className="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100 text-[9px] font-bold uppercase">Info: High Interest</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:35]</span>
-                                    <span>Aggregating sentiment from 42 external sources</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:41]</span>
-                                    <span>Model Confidence: 94.2%</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:48]</span>
-                                    <span>Generating risk-adjusted return forecasts</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="text-slate-400 select-none">[10:42:55]</span>
-                                    <span>Analyzing supply chain resilience markers...</span>
-                                </div>
-                                <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
-                                    <span className="text-slate-400 select-none">&gt;</span>
-                                    <span className="font-bold text-slate-800">Finalizing Comprehensive Report...</span>
-                                    <span className="animate-pulse w-2 h-4 bg-slate-800 inline-block align-middle ml-1"></span>
-                                </div>
+
+                                {terminalLogs.map((log, index) => (
+                                    <div key={index} className="flex gap-2 animate-fade-in">
+                                        <span className="text-slate-400 select-none text-[9px] min-w-[50px]">
+                                            &gt;
+                                        </span>
+                                        <span className="break-words">{log}</span>
+                                    </div>
+                                ))}
+
+                                {terminalLogs.length < fullLogs.length && (
+                                    <div className="flex gap-2">
+                                        <span className="text-slate-400 select-none">&gt;</span>
+                                        <span className="animate-pulse w-2 h-4 bg-slate-800 inline-block align-middle ml-1"></span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Insight Card */}
-                    <div className="relative w-full rounded-3xl overflow-hidden shadow-soft-xl group cursor-pointer border border-slate-200 bg-slate-900 aspect-[672/900] shrink-0">
-                        <img alt="Investment Tip Poster" className="absolute inset-0 w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlSfGM_2LwPqssJpivRsEsbMlIpzEguFTRJSDFP6SseGL1DPJ63o4TuCQ-uKgC9q20Xdax0E2PG-DG2O24dXRufCMKzoeHDjpoE7HQ4xYkEGLfWiG8_H6SWiYdTLoZmttOSN5E_6ex01WSU3kcjASdORUyAq_m0RHE5KLRE_x-B2n32TJVGwnyMrlztZYIJ9jTu_AzKyjvO0ad3rnS7LbCaHgp7aaAu7c4wO1SPE8B_87TWYFAcidIVzbYuEEEr8_A06WwcE99wKgA" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent"></div>
-                        <div className="absolute inset-0 p-10 flex flex-col justify-end">
-                            <div className="mb-6">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider mb-5">
-                                    <span className="material-symbols-outlined text-[14px] text-emerald-400">auto_awesome</span>
-                                    AI Strategic Insights
-                                </span>
-                                <h4 className="text-3xl font-extrabold text-white leading-tight mb-4">Supply Chain Efficiency</h4>
-                                <p className="text-slate-300 text-sm font-medium leading-relaxed opacity-90">
-                                    Our models detected a 15% increase in inventory turnover, signaling strong operational improvements and potential margin expansion in upcoming quarters.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
-                                    <div className="h-full w-1/3 bg-white rounded-full"></div>
-                                </div>
-                                <span className="text-[10px] text-white/70 font-black uppercase tracking-[0.2em]">Insight 1 of 3</span>
-                            </div>
-                        </div>
-                    </div>
+                    <StockTipsGroup />
                 </div>
             </aside >
         </div >

@@ -47,6 +47,27 @@ export function appStockBatchLatestPriceUsingGet({
   );
 }
 
+/** 股票财务数据 GET /pb/app/stock/financials_data */
+export function appStockFinancialsDataUsingGet({
+  params,
+  options,
+}: {
+  // 叠加生成的Param类型 (非body参数openapi默认没有生成对象)
+  params: API.AppStockFinancialsDataUsingGetParams;
+  options?: CustomRequestOptions;
+}) {
+  return request<API.AppStockFinancialsDataUsingGetResponse>(
+    '/pb/app/stock/financials_data',
+    {
+      method: 'GET',
+      params: {
+        ...params,
+      },
+      ...(options || {}),
+    }
+  );
+}
+
 /** 股票历史数据 GET /pb/app/stock/history_data */
 export function appStockHistoryDataUsingGet({
   params,
@@ -129,6 +150,24 @@ export function appStockMostActiveRegionGroupUsingGet({
       ...(options || {}),
     }
   );
+}
+
+/** 股票新闻 GET /pb/app/stock/news */
+export function appStockNewsUsingGet({
+  params,
+  options,
+}: {
+  // 叠加生成的Param类型 (非body参数openapi默认没有生成对象)
+  params: API.AppStockNewsUsingGetParams;
+  options?: CustomRequestOptions;
+}) {
+  return request<API.AppStockNewsUsingGetResponse>('/pb/app/stock/news', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
 }
 
 /** 股票关联数据 多周期涨跌幅、对比的股票列表、大家都在看的股票列表 GET /pb/app/stock/related_info */

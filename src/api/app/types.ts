@@ -303,6 +303,34 @@ export type AppStockBatchLatestPriceUsingGetResponses = {
   200: AppStockBatchLatestPriceUsingGetResponse;
 };
 
+export type AppStockFinancialsDataUsingGetParams = {
+  /** 股票代码 */
+  symbol: string;
+  /** 交易所品牌名，NASDAQ、NYSE、SZSE、SSE、HKEX等 */
+  exchange_acronym: string;
+  /** 财务数据类型 income_statement: 利润表, balance_sheet: 资产表, cash_flow: 现金流量表 */
+  financials_type: string;
+  /** 频率yearly: 年度, quarterly: 季度 */
+  freq_type: string;
+};
+
+export type AppStockFinancialsDataUsingGetResponse = {
+  /** 状态码 */
+  code?: string;
+  /** 提示消息 */
+  message?: string;
+  /** 数据集 */
+  data?: {
+    /** 财务数据 */
+    list?: CommonStockBaseDataResStockFinancialsItem[];
+  };
+  error?: Interface;
+};
+
+export type AppStockFinancialsDataUsingGetResponses = {
+  200: AppStockFinancialsDataUsingGetResponse;
+};
+
 export type AppStockHistoryDataUsingGetParams = {
   /** 股票代码 */
   symbol: string;
@@ -413,6 +441,30 @@ export type AppStockMostActiveRegionGroupUsingGetResponses = {
   200: AppStockMostActiveRegionGroupUsingGetResponse;
 };
 
+export type AppStockNewsUsingGetParams = {
+  /** 股票代码 */
+  symbol: string;
+  /** 交易所品牌名，NASDAQ、NYSE、SZSE、SSE、HKEX等 */
+  exchange_acronym: string;
+};
+
+export type AppStockNewsUsingGetResponse = {
+  /** 状态码 */
+  code?: string;
+  /** 提示消息 */
+  message?: string;
+  /** 数据集 */
+  data?: {
+    /** 新闻列表 */
+    list?: StockNewsResItem[];
+  };
+  error?: Interface;
+};
+
+export type AppStockNewsUsingGetResponses = {
+  200: AppStockNewsUsingGetResponse;
+};
+
 export type AppStockRelatedInfoUsingGetParams = {
   /** 股票代码 */
   symbol: string;
@@ -470,6 +522,335 @@ export type CommonStockBaseDataResCompanyOfficer = {
   birth_year?: number;
   /** 总薪酬 */
   total_pay?: number;
+};
+
+export type CommonStockBaseDataResStockFinancialsItem = {
+  /** 原始时间 */
+  date_raw?: string;
+  /** 交易所时区时间 */
+  date?: string;
+  /** 应付账款 */
+  accountsPayable?: number;
+  /** 应收账款 */
+  accountsReceivable?: number;
+  /** 累计折旧 */
+  accumulatedDepreciation?: number;
+  /** 可供出售证券 */
+  availableForSaleSecurities?: number;
+  /** 融资租赁义务 */
+  capitalLeaseObligations?: number;
+  /** 股本 */
+  capitalStock?: number;
+  /** 现金及现金等价物 */
+  cashAndCashEquivalents?: number;
+  /** 现金及短期投资 */
+  cashCashEquivalentsAndShortTermInvestments?: number;
+  /** 现金等价物 */
+  cashEquivalents?: number;
+  /** 货币资金 */
+  cashFinancial?: number;
+  /** 商业票据 */
+  commercialPaper?: number;
+  /** 普通股 */
+  commonStock?: number;
+  /** 普通股权益 */
+  commonStockEquity?: number;
+  /** 流动应计费用 */
+  currentAccruedExpenses?: number;
+  /** 流动资产 */
+  currentAssets?: number;
+  /** 一年内到期融资租赁 */
+  currentCapitalLeaseObligation?: number;
+  /** 短期债务 */
+  currentDebt?: number;
+  /** 流动债务及租赁 */
+  currentDebtAndCapitalLeaseObligation?: number;
+  /** 流动递延负债 */
+  currentDeferredLiabilities?: number;
+  /** 流动递延收入 */
+  currentDeferredRevenue?: number;
+  /** 流动负债 */
+  currentLiabilities?: number;
+  /** 不影响留存收益的损益 */
+  gainsLossesNotAffectingRetainedEarnings?: number;
+  /** 固定资产原值 */
+  grossPpe?: number;
+  /** 应交所得税 */
+  incomeTaxPayable?: number;
+  /** 存货 */
+  inventory?: number;
+  /** 投入资本 */
+  investedCapital?: number;
+  /** 金融资产投资 */
+  investmentinFinancialAssets?: number;
+  /** 投资及垫款 */
+  investmentsAndAdvances?: number;
+  /** 土地及改良 */
+  landAndImprovements?: number;
+  /** 租赁负债 */
+  leases?: number;
+  /** 长期融资租赁 */
+  longTermCapitalLeaseObligation?: number;
+  /** 长期债务 */
+  longTermDebt?: number;
+  /** 长期债务及租赁 */
+  longTermDebtAndCapitalLeaseObligation?: number;
+  /** 机器设备及家具 */
+  machineryFurnitureEquipment?: number;
+  /** 净债务 */
+  netDebt?: number;
+  /** 固定资产净值 */
+  netPpe?: number;
+  /** 有形资产净值 */
+  netTangibleAssets?: number;
+  /** 非流动递延资产 */
+  nonCurrentDeferredAssets?: number;
+  /** 非流动递延所得税资产 */
+  nonCurrentDeferredTaxesAssets?: number;
+  /** 普通股数量 */
+  ordinarySharesNumber?: number;
+  /** 其他流动资产 */
+  otherCurrentAssets?: number;
+  /** 其他短期借款 */
+  otherCurrentBorrowings?: number;
+  /** 其他流动负债 */
+  otherCurrentLiabilities?: number;
+  /** 其他权益调整 */
+  otherEquityAdjustments?: number;
+  /** 其他投资 */
+  otherInvestments?: number;
+  /** 其他非流动资产 */
+  otherNonCurrentAssets?: number;
+  /** 其他非流动负债 */
+  otherNonCurrentLiabilities?: number;
+  /** 其他房产 */
+  otherProperties?: number;
+  /** 其他应收款 */
+  otherReceivables?: number;
+  /** 其他短期投资 */
+  otherShortTermInvestments?: number;
+  /** 应付款项 */
+  payables?: number;
+  /** 应付及应计费用 */
+  payablesAndAccruedExpenses?: number;
+  /** 房产 */
+  properties?: number;
+  /** 应收款项 */
+  receivables?: number;
+  /** 留存收益 */
+  retainedEarnings?: number;
+  /** 已发行股份 */
+  shareIssued?: number;
+  /** 股东权益 */
+  stockholdersEquity?: number;
+  /** 有形资产账面价值 */
+  tangibleBookValue?: number;
+  /** 总资产 */
+  totalAssets?: number;
+  /** 总资本化 */
+  totalCapitalization?: number;
+  /** 总债务 */
+  totalDebt?: number;
+  /** 权益合计(含少数股东) */
+  totalEquityGrossMinorityInterest?: number;
+  /** 总负债 */
+  totalLiabilitiesNetMinorityInterest?: number;
+  /** 非流动资产合计 */
+  totalNonCurrentAssets?: number;
+  /** 非流动负债合计 */
+  totalNonCurrentLiabilitiesNetMinorityInterest?: number;
+  /** 应交税费合计 */
+  totalTaxPayable?: number;
+  /** 长期应付及其他 */
+  tradeandOtherPayablesNonCurrent?: number;
+  /** 库存股数量 */
+  treasurySharesNumber?: number;
+  /** 营运资本 */
+  workingCapital?: number;
+  /** 利息收入 */
+  interestIncome?: number;
+  /** 报告的营业收入总额 */
+  totalOperatingIncomeAsReported?: number;
+  /** 净非由于利息收支 */
+  netNonOperatingInterestIncomeExpense?: number;
+  /** 非经营性利息支出 */
+  interestExpenseNonOperating?: number;
+  /** 其他收支 */
+  otherIncomeExpense?: number;
+  /** 异常项目的税收影响 */
+  taxEffectOfUnusualItems?: number;
+  /** 持续经营净利润(含少数股东权益) */
+  netIncomeFromContinuingOperationNetMinorityInterest?: number;
+  /** 净利息收入 */
+  netInterestIncome?: number;
+  /** 非经营性利息收入 */
+  interestIncomeNonOperating?: number;
+  /** 其他非经营性收支 */
+  otherNonOperatingIncomeExpenses?: number;
+  /** 标准化EBITDA */
+  normalizedEbitda?: number;
+  /** 稀释平均股数 */
+  dilutedAverageShares?: number;
+  /** 营业收入 */
+  operatingIncome?: number;
+  /** 研发费用 */
+  researchAndDevelopment?: number;
+  /** 营业成本 */
+  costOfRevenue?: number;
+  /** 经营收入 */
+  operatingRevenue?: number;
+  /** 息税前利润 */
+  ebit?: number;
+  /** 持续经营和终止经营净利润 */
+  netIncomeFromContinuingAndDiscontinuedOperation?: number;
+  /** 净利润(含少数股东权益) */
+  netIncomeIncludingNoncontrollingInterests?: number;
+  /** 税项准备 */
+  taxProvision?: number;
+  /** 营业费用 */
+  operatingExpense?: number;
+  /** 毛利润 */
+  grossProfit?: number;
+  /** 总费用 */
+  totalExpenses?: number;
+  /** 持续经营净利润 */
+  netIncomeContinuousOperations?: number;
+  /** 税前利润 */
+  pretaxIncome?: number;
+  /** 总营收 */
+  totalRevenue?: number;
+  /** 计算用税率 */
+  taxRateForCalcs?: number;
+  /** 调整后的营业成本 */
+  reconciledCostOfRevenue?: number;
+  /** EBITDA */
+  ebitda?: number;
+  /** 基本平均股数 */
+  basicAverageShares?: number;
+  /** 归属普通股东净利润 */
+  netIncomeCommonStockholders?: number;
+  /** 销售及管理费用 */
+  sellingGeneralAndAdministration?: number;
+  /** 净利润 */
+  netIncome?: number;
+  /** 调整后的折旧 */
+  reconciledDepreciation?: number;
+  /** 利息支出 */
+  interestExpense?: number;
+  /** 标准化净利润 */
+  normalizedIncome?: number;
+  /** 稀释EPS */
+  dilutedEps?: number;
+  /** 基本EPS */
+  basicEps?: number;
+  /** 稀释后归属普通股东净利润 */
+  dilutedNiAvailtoComStockholders?: number;
+  /** 普通股支付 */
+  commonStockPayments?: number;
+  /** 普通股发行 */
+  commonStockIssuance?: number;
+  /** 持续投资活动现金流 */
+  cashFlowFromContinuingInvestingActivities?: number;
+  /** 其他营运资本变动 */
+  changeInOtherWorkingCapital?: number;
+  /** 其他非现金项目 */
+  otherNonCashItems?: number;
+  /** 偿还债务 */
+  repaymentOfDebt?: number;
+  /** 发行股本 */
+  issuanceOfCapitalStock?: number;
+  /** 支付利息补充数据 */
+  interestPaidSupplementalData?: number;
+  /** 长期债务偿还 */
+  longTermDebtPayments?: number;
+  /** 投资买卖净额 */
+  netInvestmentPurchaseAndSale?: number;
+  /** 购买投资 */
+  purchaseOfInvestment?: number;
+  /** 应付账款变动 */
+  changeInPayable?: number;
+  /** 折旧摊销及耗竭 */
+  depreciationAmortizationDepletion?: number;
+  /** 资本支出 */
+  capitalExpenditure?: number;
+  /** 筹资现金流 */
+  financingCashFlow?: number;
+  /** 持续筹资活动现金流 */
+  cashFlowFromContinuingFinancingActivities?: number;
+  /** 业务买卖净额 */
+  netBusinessPurchaseAndSale?: number;
+  /** 购买业务 */
+  purchaseOfBusiness?: number;
+  /** 营运资本变动 */
+  changeInWorkingCapital?: number;
+  /** 应付及应计费用变动 */
+  changeInPayablesAndAccruedExpense?: number;
+  /** 存货变动 */
+  changeInInventory?: number;
+  /** 发行债务 */
+  issuanceOfDebt?: number;
+  /** 期初现金余额 */
+  beginningCashPosition?: number;
+  /** 投资现金流 */
+  investingCashFlow?: number;
+  /** 出售投资 */
+  saleOfInvestment?: number;
+  /** 持续经营活动现金流 */
+  cashFlowFromContinuingOperatingActivities?: number;
+  /** 其他流动负债变动 */
+  changeInOtherCurrentLiabilities?: number;
+  /** 支付所得税补充数据 */
+  incomeTaxPaidSupplementalData?: number;
+  /** 支付普通股股息 */
+  commonStockDividendPaid?: number;
+  /** 债务发行支付净额 */
+  netIssuancePaymentsOfDebt?: number;
+  /** 股权激励 */
+  stockBasedCompensation?: number;
+  /** 折旧及摊销 */
+  depreciationAndAmortization?: number;
+  /** 短期债务发行净额 */
+  netShortTermDebtIssuance?: number;
+  /** 长期债务发行净额 */
+  netLongTermDebtIssuance?: number;
+  /** 固定资产买卖净额 */
+  netPpePurchaseAndSale?: number;
+  /** 其他流动资产变动 */
+  changeInOtherCurrentAssets?: number;
+  /** 应收账款变动 */
+  changesInAccountReceivables?: number;
+  /** 递延税款 */
+  deferredTax?: number;
+  /** 自由现金流 */
+  freeCashFlow?: number;
+  /** 回购股本 */
+  repurchaseOfCapitalStock?: number;
+  /** 现金变动 */
+  changesInCash?: number;
+  /** 其他投资变动净额 */
+  netOtherInvestingChanges?: number;
+  /** 购买固定资产 */
+  purchaseOfPpe?: number;
+  /** 递延所得税 */
+  deferredIncomeTax?: number;
+  /** 期末现金余额 */
+  endCashPosition?: number;
+  /** 支付现金股息 */
+  cashDividendsPaid?: number;
+  /** 普通股发行净额 */
+  netCommonStockIssuance?: number;
+  /** 长期债务发行 */
+  longTermDebtIssuance?: number;
+  /** 经营现金流 */
+  operatingCashFlow?: number;
+  /** 应付账款变动 */
+  changeInAccountPayable?: number;
+  /** 应收账款变动 */
+  changeInReceivables?: number;
+  /** 持续经营净利润 */
+  netIncomeFromContinuingOperations?: number;
+  /** 其他筹资费用净额 */
+  netOtherFinancingCharges?: number;
 };
 
 export type CommonStockBaseDataResStockHistoryItem = {
@@ -578,6 +959,23 @@ export type StockMostActiveResItem = {
   country_region_code?: string;
   /** 国家/地区svg logo链接 */
   country_region_svg_logo_url?: string;
+};
+
+export type StockNewsResItem = {
+  /** 新闻ID */
+  id?: string;
+  /** 标题 */
+  title?: string;
+  /** 摘要 */
+  summary?: string;
+  /** 发布时间 */
+  pub_date?: string;
+  /** 原文链接 */
+  url?: string;
+  /** 来源 */
+  source?: string;
+  /** 缩略图 */
+  thumbnail_url?: string;
 };
 
 export type StockRelatedInfoResStockItem = {

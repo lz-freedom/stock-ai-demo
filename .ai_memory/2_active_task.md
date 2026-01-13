@@ -1,9 +1,8 @@
 # 当前任务状态
 
-## 进行中任务
-- 初始化项目结构
-- 配置 Vite 环境
+## 已完成任务
+- [x] 将 PremiumDashboard 右下角的 tips 卡片替换为 StockTipsGroup 组件
+- [x] 优化 StockTipsGroup 组件 (标题修改为 "Tips"，调整样式以适应侧边栏)
 
 ## 下一步
-- 执行 npx create-vite
-- 安装依赖
+- 等待用户进一步指令
